@@ -48,11 +48,48 @@ Disable discovery with `--no-skills` (explicit `--skill` paths still load).
 
 Prime Agent ships with built-in skills that load by default:
 
+- `llm-council` - a Python-backed multi-model deliberation skill: several models answer a question via OpenRouter, peer-review each other's answers anonymously, and a chairman model synthesizes the result.
 - `prime-intellect` - Prime Intellect products and workflows via the prime CLI: verifiers environments and the Environments Hub, evaluations (local and hosted), Hosted Training and prime-rl, sandboxes, tunnels, Prime Inference, GPU compute, and storage. Reference docs for each area load on demand from the skill's `references/` directory.
 - `skill-creator` - teaches the agent to create new skills: markdown skill layout, frontmatter rules, placement and precedence, and the full Python-backed skill contract (package layout, `run()` convention, optional CLI, kernel venv behavior) with a working template in `references/python-skills.md`.
 - `websearch` - a Python-backed Google search skill using the [Serper](https://serper.dev) API.
 
 Built-in skills behave like any other skill but have the lowest precedence: a user, project, package, or `--skill` skill with the same name overrides the built-in one.
+
+### llm-council
+
+Runs one question past several frontier models and returns a synthesized answer
+plus a peer ranking, in three stages: every council member answers
+independently, each member then ranks all the answers shown as anonymous
+"Response A/B/C" labels, and a chairman model synthesizes the final answer from
+both. Anonymizing the labels is what keeps a model from favoring its own or a
+vendor sibling's answer.
+
+Setup: run `/login` and choose OpenRouter, or set `OPENROUTER_API_KEY`. The key
+is read from `auth.json` on each call, so adding it mid-session works.
+
+```python
+print(await llm_council("Should this service use Postgres or SQLite for a write-heavy audit log?"))
+```
+
+Pass `detail="full"` to also get every individual response and peer review, or
+call `convene()` for the structured result instead of markdown. Members that
+fail are dropped and reported rather than failing the whole council.
+
+This costs one OpenRouter call per member for the answer, one per member for the
+review, and one for the chairman — nine calls on the default four-member
+council, each carrying the full transcript. It is meant for high-stakes
+questions, not routine ones.
+
+Optional overrides (environment variables):
+
+```bash
+export PRIME_AGENT_COUNCIL_MODELS="openai/gpt-5.4,anthropic/claude-opus-5,google/gemini-3.1-pro-preview"
+export PRIME_AGENT_COUNCIL_CHAIRMAN=anthropic/claude-opus-5
+export PRIME_AGENT_COUNCIL_TIMEOUT=180
+```
+
+Keep council members spread across vendors: a council drawn from one vendor
+mostly measures that vendor's internal agreement.
 
 ### websearch
 

@@ -478,6 +478,21 @@ Content`,
 			}
 		});
 
+		it("should load the bundled llm-council skill by default", async () => {
+			const loader = new DefaultResourceLoader({ cwd, agentDir });
+			await loader.reload();
+
+			const { skills } = loader.getSkills();
+			const council = skills.find((s) => s.name === "llm-council");
+			expect(council).toBeDefined();
+			expect(council?.description).toContain("OpenRouter");
+			expect(council?.kind).toBe("python");
+			if (council?.kind === "python") {
+				expect(council.python.importName).toBe("llm_council");
+				expect(council.python.pyprojectPath.endsWith("pyproject.toml")).toBe(true);
+			}
+		});
+
 		it("should not emit a SERPER_API_KEY warning when the key is unset", async () => {
 			const loader = new DefaultResourceLoader({ cwd, agentDir });
 			await loader.reload();
