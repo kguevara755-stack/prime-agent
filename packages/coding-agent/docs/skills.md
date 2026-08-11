@@ -86,7 +86,13 @@ Optional overrides (environment variables):
 export PRIME_AGENT_COUNCIL_MODELS="openai/gpt-5.4,anthropic/claude-opus-5,google/gemini-3.1-pro-preview"
 export PRIME_AGENT_COUNCIL_CHAIRMAN=anthropic/claude-opus-5
 export PRIME_AGENT_COUNCIL_TIMEOUT=180
+export PRIME_AGENT_COUNCIL_API_URL=https://openrouter.ai/api/v1/chat/completions
 ```
+
+`PRIME_AGENT_COUNCIL_API_URL` points the council at an OpenRouter-compatible
+gateway, for networks that cannot reach openrouter.ai directly. The skill
+directory also ships `ask_council.py`, which runs the same council from a plain
+shell with only `httpx` installed, for use outside Prime Agent.
 
 Keep council members spread across vendors: a council drawn from one vendor
 mostly measures that vendor's internal agreement.

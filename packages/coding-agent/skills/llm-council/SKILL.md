@@ -65,6 +65,13 @@ From a shell cell:
 !llm_council "Is this benchmark methodology sound?" --detail full
 ```
 
+Outside Prime Agent, `ask_council.py` in this directory runs the same council
+with only `httpx` installed:
+
+```bash
+OPENROUTER_API_KEY=sk-or-... ./ask_council.py "Is this benchmark methodology sound?"
+```
+
 ## Defaults
 
 Council: `openai/gpt-5.4`, `anthropic/claude-opus-5`,
@@ -75,6 +82,8 @@ environment:
 - `PRIME_AGENT_COUNCIL_MODELS` - comma-separated council members.
 - `PRIME_AGENT_COUNCIL_CHAIRMAN` - chairman model id.
 - `PRIME_AGENT_COUNCIL_TIMEOUT` - per-request timeout in seconds (default 180).
+- `PRIME_AGENT_COUNCIL_API_URL` - override the endpoint, for an OpenRouter-compatible
+  gateway or a network that cannot reach openrouter.ai directly.
 
 A council of models that all share a vendor mostly measures agreement within
 that vendor. Keep members from different vendors.

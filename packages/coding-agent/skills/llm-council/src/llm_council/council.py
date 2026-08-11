@@ -18,7 +18,7 @@ from typing import Any, Sequence
 
 import httpx
 
-OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions"
+DEFAULT_API_URL = "https://openrouter.ai/api/v1/chat/completions"
 
 DEFAULT_COUNCIL_MODELS = (
     "openai/gpt-5.4",
@@ -36,6 +36,11 @@ NO_KEY_MESSAGE = (
     '  2. In Prime Agent, run /login and choose OpenRouter, or export OPENROUTER_API_KEY.\n'
     "Once the key is saved, the council works automatically."
 )
+
+
+def _api_url() -> str:
+    """Endpoint to call. Overridable for OpenRouter-compatible gateways."""
+    return os.environ.get("PRIME_AGENT_COUNCIL_API_URL", "").strip() or DEFAULT_API_URL
 
 
 def _env_float(name: str, default: float) -> float:
@@ -123,7 +128,7 @@ async def _query_model(
     """Query one model. Returns (content, error); exactly one is non-None."""
     try:
         response = await client.post(
-            OPENROUTER_API_URL,
+            _api_url(),
             json={"model": model, "messages": [{"role": "user", "content": prompt}]},
         )
         response.raise_for_status()

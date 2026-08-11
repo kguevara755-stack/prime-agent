@@ -318,6 +318,33 @@ class ConveneTest(unittest.TestCase):
         )
         self.assertEqual(client.models_for_stage("stage3"), ["vendor-c/three"])
 
+    def test_endpoint_defaults_to_openrouter_and_is_overridable(self) -> None:
+        urls: list[str] = []
+
+        class RecordingClient(FakeClient):
+            async def post(self, url: str, json: dict) -> httpx.Response:
+                urls.append(url)
+                return await super().post(url, json)
+
+        def factory(**kwargs):
+            return RecordingClient(happy_handler, **kwargs)
+
+        env = {"OPENROUTER_API_KEY": "test-key", "PRIME_AGENT_COUNCIL_API_URL": ""}
+        with patch.dict("os.environ", env, clear=False):
+            with patch.object(self.module.httpx, "AsyncClient", factory):
+                asyncio.run(self.module.convene("q", models=THREE))
+        self.assertEqual(set(urls), {self.module.DEFAULT_API_URL})
+
+        urls.clear()
+        env = {
+            "OPENROUTER_API_KEY": "test-key",
+            "PRIME_AGENT_COUNCIL_API_URL": "http://gateway.internal/v1/chat/completions",
+        }
+        with patch.dict("os.environ", env, clear=False):
+            with patch.object(self.module.httpx, "AsyncClient", factory):
+                asyncio.run(self.module.convene("q", models=THREE))
+        self.assertEqual(set(urls), {"http://gateway.internal/v1/chat/completions"})
+
     def test_auth_header_and_timeout_reach_the_client(self) -> None:
         _result, client = run_convene(self.module, happy_handler, models=THREE, timeout=42.0)
         self.assertEqual(client.kwargs["timeout"], 42.0)
