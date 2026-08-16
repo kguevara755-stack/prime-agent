@@ -1,0 +1,1296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Price Book Trainer</title>
+<style>
+:root{
+  --bg:#0e1116; --panel:#161b23; --panel2:#1c2230; --line:#2a3242; --line2:#3a4457;
+  --ink:#e6edf6; --muted:#8b97ab; --dim:#5f6b7f;
+  --accent:#4f9cf9; --accent-dim:#1d3a5f;
+  --good:#3fbf7f; --bad:#f2596a; --warn:#e8a33d; --unknown:#c98a2b;
+  --radius:10px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--bg); color:var(--ink);
+  font:14px/1.5 ui-sans-serif,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+button{font:inherit;color:inherit;cursor:pointer;background:none;border:none}
+input,select{font:inherit;color:inherit}
+.wrap{max-width:1120px;margin:0 auto;padding:0 18px 80px}
+
+/* ---------- header ---------- */
+header{position:sticky;top:0;z-index:30;background:rgba(14,17,22,.94);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.hbar{max-width:1120px;margin:0 auto;padding:10px 18px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.brand{font-weight:650;letter-spacing:-.01em;font-size:15px;white-space:nowrap}
+.brand span{color:var(--muted);font-weight:400}
+nav{display:flex;gap:2px;flex-wrap:wrap}
+nav button{padding:6px 12px;border-radius:7px;color:var(--muted);font-weight:520;font-size:13px}
+nav button:hover{background:var(--panel2);color:var(--ink)}
+nav button.on{background:var(--accent-dim);color:#cfe3ff}
+.hmeta{margin-left:auto;font-size:11px;color:var(--dim);white-space:nowrap}
+
+/* ---------- generic ---------- */
+h2{font-size:17px;margin:22px 0 4px;font-weight:620;letter-spacing:-.01em}
+h3{font-size:14px;margin:0 0 8px;font-weight:600}
+.sub{color:var(--muted);font-size:12.5px;margin:0 0 14px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius)}
+.pad{padding:14px 16px}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.grow{flex:1 1 auto;min-width:0}
+.mono{font-variant-numeric:tabular-nums;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.hide{display:none !important}
+.center{text-align:center}
+
+/* ---------- controls ---------- */
+.search{
+  width:100%;padding:13px 15px;background:var(--panel);border:1px solid var(--line2);
+  border-radius:var(--radius);font-size:16px;outline:none;
+}
+.search:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(79,156,249,.14)}
+.num{width:130px;padding:9px 11px;background:var(--panel);border:1px solid var(--line2);border-radius:8px;font-size:15px;outline:none}
+.num:focus{border-color:var(--accent)}
+.chip{
+  padding:4px 11px;border-radius:999px;border:1px solid var(--line2);
+  color:var(--muted);font-size:12px;font-weight:520;white-space:nowrap;
+}
+.chip:hover{border-color:var(--dim);color:var(--ink)}
+.chip.on{background:var(--accent-dim);border-color:#2f5c8f;color:#cfe3ff}
+.chipset{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.chiplabel{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.06em;margin-right:2px}
+.btn{padding:9px 16px;border-radius:8px;background:var(--panel2);border:1px solid var(--line2);font-weight:560;font-size:13px}
+.btn:hover{border-color:var(--dim)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#05203f}
+.btn.primary:hover{background:#69adfb}
+.btn.good{background:#1a3d2c;border-color:#2b6647;color:#8ce0b4}
+.btn.good:hover{border-color:var(--good)}
+.btn.bad{background:#3d1d23;border-color:#6b3038;color:#f6a3ad}
+.btn.bad:hover{border-color:var(--bad)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+
+/* ---------- value badges ---------- */
+.na,.unk{
+  display:inline-block;padding:1px 7px;border-radius:5px;font-size:11px;
+  font-weight:600;letter-spacing:.03em;cursor:help;
+}
+.na{background:#232a36;color:var(--dim);border:1px solid #2e3644}
+.unk{background:#3a2c14;color:#e8b563;border:1px solid #5c441c}
+.adj{
+  display:inline-block;padding:1px 7px;border-radius:5px;font-size:10.5px;font-weight:600;
+  background:#3a2c14;color:#f0c078;border:1px solid #6b4f1e;cursor:help;margin-left:6px;
+  white-space:nowrap;
+}
+.tag{
+  display:inline-block;padding:1px 7px;border-radius:5px;font-size:10.5px;font-weight:600;
+  background:var(--panel2);border:1px solid var(--line);color:var(--muted);
+}
+.tag.rec{color:#8fd3ff;border-color:#2b4f6b;background:#12293a}
+.tag.one{color:#c8b0ff;border-color:#4a3d73;background:#221c38}
+.tag.both{color:#9be3c4;border-color:#2b6647;background:#122c22}
+.tag.none{color:var(--dim)}
+.price{font-weight:660;font-size:15px;color:#eaf2ff}
+.price.small{font-size:13.5px}
+
+/* ---------- result list ---------- */
+.results{display:flex;flex-direction:column;gap:8px;margin-top:14px}
+.item{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+.item.open{border-color:var(--line2)}
+.ihead{width:100%;display:flex;gap:12px;align-items:flex-start;padding:11px 14px;text-align:left}
+.ihead:hover{background:var(--panel2)}
+.iname{font-weight:600;font-size:14px}
+.icode{font-size:11.5px;color:var(--dim);margin-top:2px}
+.iright{margin-left:auto;text-align:right;white-space:nowrap;padding-left:8px}
+.ibody{border-top:1px solid var(--line);padding:12px 14px;background:#12161e}
+.fields{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:9px 18px}
+.f{min-width:0}
+.fk{font-size:10.5px;color:var(--dim);text-transform:uppercase;letter-spacing:.05em}
+.fv{font-size:13px;word-break:break-word}
+.wide{grid-column:1/-1}
+.src{margin-top:11px;padding-top:9px;border-top:1px dashed var(--line);font-size:11px;color:var(--dim);word-break:break-word}
+.callout{margin-top:9px;padding:8px 11px;border-radius:8px;font-size:12.5px;border:1px solid}
+.callout.min{background:#2a2210;border-color:#5c481c;color:#f0cd8a}
+.callout.cond{background:#151d2a;border-color:#2b3a52;color:#b8c9e0}
+
+/* ---------- tier ladder ---------- */
+table.ladder{width:100%;border-collapse:collapse;margin-top:4px;font-size:13px}
+table.ladder th{
+  text-align:left;font-size:10.5px;color:var(--dim);text-transform:uppercase;
+  letter-spacing:.05em;font-weight:600;padding:4px 8px;border-bottom:1px solid var(--line);
+}
+table.ladder td{padding:5px 8px;border-bottom:1px solid #1d2430}
+table.ladder tr:last-child td{border-bottom:none}
+table.ladder tr.hit td{background:#12293a}
+table.ladder tr.hit td:first-child{box-shadow:inset 3px 0 0 var(--accent)}
+.ladder .tcell{white-space:nowrap;color:var(--muted)}
+
+/* ---------- drill ---------- */
+.modes{display:grid;grid-template-columns:repeat(auto-fill,minmax(215px,1fr));gap:10px;margin-top:14px}
+.mode{padding:14px;border-radius:var(--radius);background:var(--panel);border:1px solid var(--line);text-align:left}
+.mode:hover:not(.off){border-color:var(--accent);background:var(--panel2)}
+.mode.off{opacity:.5;cursor:not-allowed}
+.mode .mt{font-weight:620;font-size:14px;margin-bottom:3px}
+.mode .md{font-size:12px;color:var(--muted);line-height:1.45}
+.mode .mn{font-size:11px;color:var(--dim);margin-top:7px}
+.mode.off .mn{color:var(--bad)}
+.stage{margin-top:14px}
+.qbar{display:flex;align-items:center;gap:14px;font-size:12.5px;color:var(--muted);margin-bottom:10px;flex-wrap:wrap}
+.qcard{padding:26px 22px;text-align:center}
+.qprompt{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:10px}
+.qmain{font-size:23px;font-weight:640;line-height:1.3;letter-spacing:-.01em}
+.qsub{color:var(--muted);font-size:13.5px;margin-top:7px}
+.qans{font-size:30px;font-weight:700;margin:18px 0 4px;color:#8fd3ff}
+.opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:9px;margin-top:20px}
+.opt{padding:14px;border-radius:9px;background:var(--panel2);border:1px solid var(--line2);font-size:16px;font-weight:620}
+.opt:hover:not(:disabled){border-color:var(--accent)}
+.opt.right{background:#143527;border-color:var(--good);color:#8ce0b4}
+.opt.wrong{background:#37171d;border-color:var(--bad);color:#f6a3ad}
+.opt:disabled{cursor:default}
+.timer{font-size:19px;font-weight:700;font-variant-numeric:tabular-nums}
+.timer.low{color:var(--bad)}
+.picks{display:flex;flex-wrap:wrap;gap:7px;margin-top:16px;justify-content:center}
+.pick{padding:7px 13px;border-radius:8px;border:1px solid var(--line2);background:var(--panel2);font-size:13px}
+.pick:hover:not(:disabled){border-color:var(--accent)}
+.pick.sel{background:var(--accent-dim);border-color:#3d76b8;color:#cfe3ff}
+.pick.ok{background:#143527;border-color:var(--good);color:#8ce0b4}
+.pick.miss{background:#37171d;border-color:var(--bad);color:#f6a3ad}
+.pick.extra{background:#2a2210;border-color:var(--warn);color:#f0cd8a}
+.pick:disabled{cursor:default}
+.feedback{margin-top:16px;font-size:14px;font-weight:600}
+.feedback.ok{color:var(--good)}
+.feedback.no{color:var(--bad)}
+
+/* ---------- stats ---------- */
+.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.stat{padding:14px 16px}
+.stat .sv{font-size:26px;font-weight:700;letter-spacing:-.02em}
+.stat .sk{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.06em;margin-top:2px}
+.bar{height:6px;background:var(--panel2);border-radius:99px;overflow:hidden;margin-top:6px}
+.bar i{display:block;height:100%;background:var(--accent);border-radius:99px}
+.boxes{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:10px}
+.box{padding:11px;text-align:center;border-radius:8px;background:var(--panel2);border:1px solid var(--line)}
+.box b{display:block;font-size:19px;font-weight:700}
+.box span{font-size:10.5px;color:var(--dim)}
+.wk{display:flex;flex-direction:column;gap:6px;margin-top:10px}
+.wkrow{display:flex;gap:10px;align-items:center;padding:8px 11px;border-radius:8px;background:var(--panel2);border:1px solid var(--line);font-size:13px}
+.wkrow .wn{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wkrow .ws{font-size:11.5px;color:var(--bad);white-space:nowrap;font-variant-numeric:tabular-nums}
+
+/* ---------- notice ---------- */
+.notice{padding:11px 14px;border-radius:9px;font-size:12.5px;line-height:1.5;margin-top:12px;border:1px solid}
+.notice.warn{background:#2a2210;border-color:#5c481c;color:#f0cd8a}
+.notice.info{background:#141b26;border-color:#2b3a52;color:#b8c9e0}
+.empty{padding:44px 20px;text-align:center;color:var(--dim);font-size:13.5px}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="hbar">
+    <div class="brand">Price Book <span>Trainer</span></div>
+    <nav id="nav"></nav>
+    <div class="hmeta" id="hmeta"></div>
+  </div>
+</header>
+
+<div class="wrap">
+  <main id="view"></main>
+</div>
+
+<script>
+/* ===========================================================================
+   Dataset - inlined by build.py. Never fetched at runtime (file:// + CORS).
+   =========================================================================== */
+const RAW = /*__PRICEBOOK_DATA__*/;
+
+/* ===========================================================================
+   0. Rehydrate
+   =========================================================================== */
+const NA = "N/A", UNKNOWN = "UNKNOWN";
+
+RAW.rows.forEach(r => {
+  if (r.tier_max_num === "Infinity") r.tier_max_num = Infinity;
+  if (r.tier_min_num === "-Infinity") r.tier_min_num = -Infinity;
+});
+
+const ROWS   = RAW.rows;
+const BY_ID  = new Map(ROWS.map(r => [r.id, r]));
+const GROUPS = RAW.groups;
+const PROMOS = RAW.promotions || [];
+const AVAIL  = RAW.availability;
+const MIN_POOL = AVAIL.minimum;
+
+GROUPS.forEach(g => { g.rows = g.row_ids.map(id => BY_ID.get(id)); });
+const GROUP_OF = new Map();
+GROUPS.forEach(g => g.rows.forEach(r => GROUP_OF.set(r.id, g)));
+
+const ELIGIBLE = ROWS.filter(r => r.quiz_eligible);
+const CATEGORIES = [...new Set(ROWS.map(r => r.category))];
+
+/* ===========================================================================
+   1. Value rendering - N/A and UNKNOWN stay visible and distinct
+   =========================================================================== */
+const esc = s => String(s == null ? "" : s)
+  .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+
+const isNA   = v => v === NA;
+const isUNK  = v => v === UNKNOWN;
+const isReal = v => v != null && v !== "" && !isNA(v) && !isUNK(v);
+
+/** Render a raw source value. Currency strings are printed exactly as the
+ *  source printed them - never reformatted, rounded or recomputed. */
+function val(v, cls) {
+  if (v == null || v === "") return `<span class="na" title="empty in source">&mdash;</span>`;
+  if (isNA(v))  return `<span class="na" title="N/A - this field does not apply to this product">N/A</span>`;
+  if (isUNK(v)) return `<span class="unk" title="UNKNOWN - the source price book did not print this value">UNKNOWN</span>`;
+  return `<span class="${cls || ""}">${esc(v)}</span>`;
+}
+
+/** "adjusted, unconfirmed" badge - only for rows touched by OVERRIDES. */
+function adjBadge(row) {
+  if (!row.adjusted) return "";
+  const t = (row.overrides || []).map(o =>
+    `${o.field}: printed "${o.from}" → shown "${o.to}"\n${o.reason}`).join("\n\n");
+  return `<span class="adj" title="${esc(t)}">adjusted, unconfirmed</span>`;
+}
+
+function tierLabel(row) {
+  if (!row.tiered) return "Untiered";
+  const lo = row.tier_min_num, hi = row.tier_max_num;
+  if (lo == null && hi == null) return "Untiered";
+  const loT = lo == null ? "?" : lo.toLocaleString();
+  if (hi === Infinity) return `${loT}+ EE`;
+  if (hi == null) return `${loT}+ EE`;
+  return `${loT}–${hi.toLocaleString()} EE`;
+}
+
+function priceCell(row) {
+  const bits = [];
+  if (isReal(row.unit_price))
+    bits.push(`<span class="price small">${esc(row.unit_price)}</span>
+               <span class="tag rec">${isReal(row.pricing_model) ? esc(row.pricing_model) : "recurring"}</span>`);
+  else if (isUNK(row.unit_price)) bits.push(val(row.unit_price));
+  if (isReal(row.one_time_fee))
+    bits.push(`<span class="price small">${esc(row.one_time_fee)}</span> <span class="tag one">one-time</span>`);
+  if (!bits.length) bits.push(`<span class="tag none">no price</span>`);
+  return bits.join('<div style="height:3px"></div>');
+}
+
+const PT_LABEL = { recurring:"Recurring", one_time:"One-time", both:"Both", none:"No price" };
+
+/* ===========================================================================
+   2. Progress store (Leitner) - versioned localStorage
+   =========================================================================== */
+const STORE_KEY = "pricebookTrainer.progress.v1";
+const BOX_DAYS  = [0, 1, 3, 7, 21];   // box 1..5 -> days until it resurfaces
+const DAY_MS    = 86400000;
+
+function blankStore() {
+  return {
+    schema: 1,
+    dataVersion: RAW.data_version,
+    items: {},                 // id -> {box, due, seen, right, wrong, last}
+    log: [],                   // {t, id, category, mode, ok}
+    streak: 0, best: 0, lastDay: null,
+    migrated: 0
+  };
+}
+
+let STORE = loadStore();
+
+function loadStore() {
+  let s;
+  try { s = JSON.parse(localStorage.getItem(STORE_KEY) || "null"); }
+  catch (e) { s = null; }
+  if (!s || s.schema !== 1) return blankStore();
+
+  // A data rebuild must never corrupt progress: keep everything that still
+  // resolves to a live row id, drop the rest, and report how many were dropped.
+  if (s.dataVersion !== RAW.data_version) {
+    let dropped = 0;
+    for (const id of Object.keys(s.items)) {
+      if (!BY_ID.has(id)) { delete s.items[id]; dropped++; }
+    }
+    s.log = (s.log || []).filter(e => BY_ID.has(e.id));
+    s.dataVersion = RAW.data_version;
+    s.migrated = dropped;
+    save(s);
+  }
+  return s;
+}
+
+function save(s) {
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(s || STORE)); }
+  catch (e) { /* quota or private mode - drilling still works, just unsaved */ }
+}
+
+function itemOf(id) {
+  if (!STORE.items[id]) STORE.items[id] = { box:1, due:0, seen:0, right:0, wrong:0, last:0 };
+  return STORE.items[id];
+}
+
+function grade(id, ok, mode) {
+  const row = BY_ID.get(id); if (!row) return;
+  const it = itemOf(id), now = Date.now();
+  it.seen++; it.last = now;
+  if (ok) { it.right++; it.box = Math.min(5, it.box + 1); }
+  else    { it.wrong++; it.box = 1; }
+  it.due = now + BOX_DAYS[it.box - 1] * DAY_MS;
+
+  STORE.log.push({ t: now, id, category: row.category, mode, ok: !!ok });
+  if (STORE.log.length > 3000) STORE.log = STORE.log.slice(-3000);
+
+  const today = new Date(now).toDateString();
+  if (STORE.lastDay !== today) {
+    const y = new Date(now - DAY_MS).toDateString();
+    STORE.streak = (STORE.lastDay === y) ? STORE.streak + 1 : 1;
+    STORE.lastDay = today;
+    STORE.best = Math.max(STORE.best || 0, STORE.streak);
+  }
+  save();
+}
+
+/** Leitner ordering: overdue first, then never-seen, then by box. */
+function scheduled(pool) {
+  const now = Date.now();
+  return pool.slice().sort((a, b) => {
+    const A = STORE.items[a.id], B = STORE.items[b.id];
+    const ad = A ? (A.due <= now ? 0 : 2) : 1;
+    const bd = B ? (B.due <= now ? 0 : 2) : 1;
+    if (ad !== bd) return ad - bd;
+    const ab = A ? A.box : 1, bb = B ? B.box : 1;
+    if (ab !== bb) return ab - bb;
+    return (A ? A.due : 0) - (B ? B.due : 0);
+  });
+}
+
+const pick    = arr => arr[Math.floor(Math.random() * arr.length)];
+const shuffle = arr => { const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i],a[j]]=[a[j],a[i]]; }
+  return a; };
+
+/** Draw from the scheduled head so due items surface, with some jitter. */
+function drawScheduled(pool, avoidId) {
+  let p = pool.filter(r => r.id !== avoidId);
+  if (!p.length) p = pool;
+  const ordered = scheduled(p);
+  return pick(ordered.slice(0, Math.max(1, Math.min(12, ordered.length))));
+}
+
+/* ===========================================================================
+   3. Search
+   =========================================================================== */
+function substrScore(needle, hay) {
+  if (!hay) return 0;
+  const h = hay.toLowerCase();
+  const i = h.indexOf(needle);
+  if (i < 0) return 0;
+  if (i === 0) return 100;
+  return /[\s\-(/:,]/.test(h[i - 1]) ? 80 : 55;   // word start beats mid-word
+}
+
+/** Typo tolerance. Deliberately restricted to product names and to terms long
+ *  enough to be meaningful - a loose subsequence over descriptions matches
+ *  almost everything and buries the row you actually wanted. */
+function subseqScore(needle, hay) {
+  if (!hay || needle.length < 4) return 0;
+  const h = hay.toLowerCase();
+  let hi = 0, run = 0, score = 0, first = -1;
+  for (const ch of needle) {
+    const at = h.indexOf(ch, hi);
+    if (at < 0) return 0;
+    if (first < 0) first = at;
+    run = at === hi ? run + 1 : 0;
+    score += 1 + run;
+    hi = at + 1;
+  }
+  const span = hi - first;
+  if (span > needle.length * 3) return 0;         // matched letters too scattered
+  return Math.min(45, score);
+}
+
+/** Optimal string alignment distance, bailing out past `max`.
+ *  Counts a transposition as one edit, which matters here: the price book is
+ *  full of source misspellings ("Ceritfied Payroll", "Adminstration",
+ *  "Additonal") that get typed correctly, and a subsequence match cannot
+ *  recover from two letters being swapped. */
+function osaDistance(a, b, max) {
+  const m = a.length, n = b.length;
+  if (Math.abs(m - n) > max) return max + 1;
+  const d = [];
+  for (let i = 0; i <= m; i++) { d[i] = new Array(n + 1).fill(0); d[i][0] = i; }
+  for (let j = 0; j <= n; j++) d[0][j] = j;
+  for (let i = 1; i <= m; i++) {
+    let rowBest = Infinity;
+    for (let j = 1; j <= n; j++) {
+      const cost = a[i-1] === b[j-1] ? 0 : 1;
+      let v = Math.min(d[i-1][j] + 1, d[i][j-1] + 1, d[i-1][j-1] + cost);
+      if (i > 1 && j > 1 && a[i-1] === b[j-2] && a[i-2] === b[j-1])
+        v = Math.min(v, d[i-2][j-2] + 1);
+      d[i][j] = v;
+      if (v < rowBest) rowBest = v;
+    }
+    if (rowBest > max) return max + 1;
+  }
+  return d[m][n];
+}
+
+const TOKEN_RE = /[a-z0-9]+/g;
+ROWS.forEach(r => { r._tok = (r.product_name.toLowerCase().match(TOKEN_RE) || []); });
+
+function tokenFuzzy(term, tokens) {
+  if (term.length < 4) return 0;
+  const max = term.length <= 5 ? 1 : 2;
+  let best = 0;
+  for (const tok of tokens) {
+    if (Math.abs(tok.length - term.length) > max) continue;
+    const d = osaDistance(term, tok, max);
+    if (d <= max) best = Math.max(best, 62 - d * 10);
+  }
+  return best;
+}
+
+function searchScore(query, row) {
+  const terms = query.toLowerCase().split(/\s+/).filter(Boolean);
+  if (!terms.length) return 1;
+  let total = 0;
+  for (const t of terms) {
+    // Exact-ish matches first; the expensive fuzzy passes only run when a term
+    // does not appear literally anywhere on the row.
+    let s = Math.max(
+      substrScore(t, row.product_name) * 3,
+      substrScore(t, row.product_code) * 2.2,
+      substrScore(t, row.description) * 0.9,
+      substrScore(t, row.conditions) * 0.5
+    );
+    if (!s) s = Math.max(tokenFuzzy(t, row._tok) * 2, subseqScore(t, row.product_name) * 2);
+    if (!s) return 0;              // every term must land somewhere
+    total += s;
+  }
+  return total / terms.length;
+}
+
+/* ===========================================================================
+   4. Tier resolution against a headcount
+   =========================================================================== */
+function inTier(row, n) {
+  const lo = row.tier_min_num, hi = row.tier_max_num;
+  if (lo == null && hi == null) return false;
+  if (lo != null && n < lo) return false;
+  if (hi != null && n > hi) return false;
+  return true;
+}
+
+/** Tiered groups whose ladder is made of plain employee bands. */
+function tieredGroups(onlyEligible) {
+  return GROUPS.filter(g => {
+    const t = g.rows.filter(r => r.tiered && r.tier_min_num != null
+                                 && (!onlyEligible || r.quiz_eligible));
+    return t.length >= 2;
+  });
+}
+
+/* ===========================================================================
+   5. Router
+   =========================================================================== */
+const TABS = [
+  { id:"lookup",   label:"Lookup" },
+  { id:"resolver", label:"Headcount" },
+  { id:"drill",    label:"Drill" },
+  { id:"promos",   label:"Promos" },
+  { id:"stats",    label:"Stats" }
+];
+let tab = "lookup";
+let timerHandle = null;
+
+function go(id) {
+  if (timerHandle) { clearInterval(timerHandle); timerHandle = null; }
+  tab = id; drill.mode = null;
+  render();
+}
+
+function render() {
+  document.getElementById("nav").innerHTML = TABS.map(t =>
+    `<button class="${t.id===tab?"on":""}" data-tab="${t.id}">${t.label}</button>`).join("");
+  document.getElementById("hmeta").textContent =
+    `${RAW.counts.total} rows · ${RAW.counts.quiz_eligible} quiz-eligible · build ${RAW.data_version}`;
+  const view = document.getElementById("view");
+  ({ lookup:viewLookup, resolver:viewResolver, drill:viewDrill,
+     promos:viewPromos, stats:viewStats })[tab](view);
+}
+
+document.addEventListener("click", e => {
+  const t = e.target.closest("[data-tab]");
+  if (t) go(t.dataset.tab);
+});
+
+/* ===========================================================================
+   6. LOOKUP
+   =========================================================================== */
+const lk = { q:"", cat:"all", ptype:"all", tier:"all", open:new Set() };
+
+function viewLookup(el) {
+  el.innerHTML = `
+    <h2>Lookup</h2>
+    <p class="sub">Search product name, part number or description. Everything in the price book is
+      searchable, including rows with no price.</p>
+    <input class="search" id="q" placeholder="Search 421 products&hellip;  try &ldquo;benefits admin&rdquo;, &ldquo;8145&rdquo;, &ldquo;clock&rdquo;"
+           value="${esc(lk.q)}" autocomplete="off" spellcheck="false">
+    <div style="margin-top:11px;display:flex;flex-direction:column;gap:7px">
+      <div class="chipset"><span class="chiplabel">Category</span>
+        ${chips("cat", [["all","All"]].concat(CATEGORIES.map(c => [c, c])))}</div>
+      <div class="chipset"><span class="chiplabel">Price</span>
+        ${chips("ptype", [["all","All"],["recurring","Recurring"],["one_time","One-time"],
+                          ["both","Both"],["none","No price"]])}</div>
+      <div class="chipset"><span class="chiplabel">Tiers</span>
+        ${chips("tier", [["all","All"],["tiered","Tiered"],["untiered","Untiered"]])}</div>
+    </div>
+    <div id="res"></div>`;
+
+  const q = el.querySelector("#q");
+  q.addEventListener("input", () => { lk.q = q.value; drawResults(); });
+  el.querySelectorAll("[data-chip]").forEach(b => b.addEventListener("click", () => {
+    lk[b.dataset.chip] = b.dataset.v; render();
+    const box = document.getElementById("q"); if (box) box.focus();
+  }));
+  drawResults();
+  q.focus();
+}
+
+function chips(key, pairs) {
+  return pairs.map(([v, label]) =>
+    `<button class="chip ${lk[key]===v?"on":""}" data-chip="${key}" data-v="${esc(v)}">${esc(label)}</button>`
+  ).join("");
+}
+
+function filteredRows() {
+  return ROWS.filter(r =>
+    (lk.cat   === "all" || r.category === lk.cat) &&
+    (lk.ptype === "all" || r.price_type === lk.ptype) &&
+    (lk.tier  === "all" || (lk.tier === "tiered" ? r.tiered : !r.tiered))
+  );
+}
+
+function drawResults() {
+  const rows = filteredRows();
+
+  // Score per group so a multi-tier product is one card, not N results.
+  const scored = new Map();
+  for (const r of rows) {
+    const s = searchScore(lk.q, r);
+    if (!s) continue;
+    const g = GROUP_OF.get(r.id);
+    const cur = scored.get(g) || { g, s:0, rows:[] };
+    cur.s = Math.max(cur.s, s); cur.rows.push(r);
+    scored.set(g, cur);
+  }
+  const list = [...scored.values()]
+    .sort((a, b) => b.s - a.s || a.g.product_name.localeCompare(b.g.product_name));
+
+  const host = document.getElementById("res");
+  if (!list.length) {
+    host.innerHTML = `<div class="empty">No products match. Clear a filter or try a shorter search.</div>`;
+    return;
+  }
+
+  const shown = list.slice(0, 120);
+  const matchedRows = list.reduce((n, x) => n + x.rows.length, 0);
+  host.innerHTML =
+    `<p class="sub" style="margin:14px 0 0">${list.length} product${list.length===1?"":"s"} · ${
+       matchedRows} matching row${matchedRows===1?"":"s"}${
+       lk.q.trim() ? ` · ${rows.length} in filter` : ""}${
+       list.length > shown.length ? ` · showing first ${shown.length}` : ""}</p>
+     <div class="results">${shown.map(x => card(x.g, x.rows)).join("")}</div>`;
+
+  host.querySelectorAll("[data-toggle]").forEach(b => b.addEventListener("click", () => {
+    const id = b.dataset.toggle;
+    lk.open.has(id) ? lk.open.delete(id) : lk.open.add(id);
+    drawResults();
+  }));
+}
+
+function card(g, matched) {
+  const open = lk.open.has(g.group_id);
+  const rows = g.rows;
+  const multi = rows.length > 1;
+  const anyAdj = rows.some(r => r.adjusted);
+  const priceSummary = multi
+    ? `<span class="tag">${rows.length} tiers</span>`
+    : priceCell(rows[0]);
+
+  return `<div class="item ${open?"open":""}">
+    <button class="ihead" data-toggle="${esc(g.group_id)}">
+      <div class="grow">
+        <div class="iname">${esc(g.product_name)}${anyAdj ? adjBadge(rows.find(r=>r.adjusted)) : ""}</div>
+        <div class="icode">${esc(g.category)} · part ${
+          isReal(g.product_code) ? esc(g.product_code)
+            : (isNA(g.product_code) ? "N/A" : "UNKNOWN")}</div>
+      </div>
+      <div class="iright">${priceSummary}</div>
+    </button>
+    ${open ? `<div class="ibody">${multi ? ladder(rows) : ""}${rows.map(detail).join("")}</div>` : ""}
+  </div>`;
+}
+
+function ladder(rows, hitId) {
+  const sorted = rows.slice().sort((a,b) =>
+    (a.tier_min_num == null ? -1 : a.tier_min_num) - (b.tier_min_num == null ? -1 : b.tier_min_num));
+  return `<h3>Tier ladder</h3>
+    <table class="ladder">
+      <tr><th>Tier</th><th>Recurring</th><th>One-time</th><th>Monthly minimum</th></tr>
+      ${sorted.map(r => `<tr class="${hitId===r.id?"hit":""}">
+        <td class="tcell">${esc(tierLabel(r))}${adjBadge(r)}</td>
+        <td>${isReal(r.unit_price) ? `<b>${esc(r.unit_price)}</b>` : val(r.unit_price)}</td>
+        <td>${isReal(r.one_time_fee) ? esc(r.one_time_fee) : val(r.one_time_fee)}</td>
+        <td>${isReal(r.monthly_minimum) ? esc(r.monthly_minimum) : val(r.monthly_minimum)}</td>
+      </tr>`).join("")}
+    </table>`;
+}
+
+function detail(r) {
+  const f = (k, v, cls) => `<div class="f"><div class="fk">${k}</div><div class="fv">${val(v, cls)}</div></div>`;
+  return `<div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--line)">
+    <h3>${esc(tierLabel(r))}${adjBadge(r)}
+      <span class="tag ${r.price_type==="one_time"?"one":r.price_type==="both"?"both":r.price_type==="none"?"none":"rec"}"
+            style="margin-left:6px">${PT_LABEL[r.price_type]}</span></h3>
+    <div class="fields">
+      ${f("Unit price", r.unit_price, "price small")}
+      ${f("Unit basis", r.unit_basis)}
+      ${f("Pricing model", r.pricing_model)}
+      ${f("Billing frequency", r.billing_frequency)}
+      ${f("One-time fee", r.one_time_fee, "price small")}
+      ${f("Setup fee", r.setup_fee)}
+      ${f("Monthly minimum", r.monthly_minimum)}
+      ${f("Tier min EE", r.adjusted && r.tier_min_ees_source != null
+            ? `${r.tier_min_ees} (source printed ${r.tier_min_ees_source})` : r.tier_min_ees)}
+      ${f("Tier max EE", r.tier_max_ees)}
+      ${f("Effective date", r.effective_date)}
+      ${f("Part number", r.product_code)}
+      ${f("Row id", r.id)}
+      ${isReal(r.required_dependencies) ? `<div class="f wide"><div class="fk">Required dependencies</div>
+          <div class="fv">${r.dependencies.map(d=>`<span class="tag">${esc(d)}</span>`).join(" ")}</div></div>` : ""}
+      ${isReal(r.description) ? `<div class="f wide"><div class="fk">Description</div>
+          <div class="fv" style="color:var(--muted)">${esc(r.description)}</div></div>` : ""}
+    </div>
+    ${isReal(r.monthly_minimum)
+      ? `<div class="callout min"><b>Monthly minimum ${esc(r.monthly_minimum)}</b> &mdash; this is a separate
+           constraint from the unit price. Quote both.</div>` : ""}
+    ${isReal(r.conditions)
+      ? `<div class="callout cond"><b>Conditions</b><br>${esc(r.conditions)}</div>` : ""}
+    ${!r.quiz_eligible ? `<div class="callout cond" style="color:var(--dim)">Excluded from drills:
+        ${esc(r.exclusion_reasons.join("; "))}</div>` : ""}
+    <div class="src">${esc(r.source_file)}<br>${esc(r.source_page)}</div>
+  </div>`;
+}
+
+/* ===========================================================================
+   7. HEADCOUNT RESOLVER
+   =========================================================================== */
+let hc = 85;
+
+function viewResolver(el) {
+  el.innerHTML = `
+    <h2>Headcount resolver</h2>
+    <p class="sub">Enter a client headcount to see every tiered product's applicable price at that size.</p>
+    <div class="card pad row">
+      <label class="chiplabel" for="hc" style="margin:0">Employees</label>
+      <input class="num mono" id="hc" type="number" min="1" step="1" value="${hc}">
+      <span class="sub" style="margin:0">Press Enter or change the value</span>
+    </div>
+    <div id="rr"></div>`;
+  const input = el.querySelector("#hc");
+  const run = () => { hc = Math.max(1, parseInt(input.value, 10) || 1); resolve(); };
+  input.addEventListener("change", run);
+  input.addEventListener("keydown", e => { if (e.key === "Enter") run(); });
+  resolve();
+  input.focus(); input.select();
+}
+
+function resolve() {
+  const hits = [], gaps = [];
+  for (const g of tieredGroups(false)) {
+    const bands = g.rows.filter(r => r.tiered && r.tier_min_num != null);
+    const hit = bands.find(r => inTier(r, hc));
+    if (hit) hits.push({ g, row: hit });
+    else gaps.push({ g, bands });
+  }
+  hits.sort((a,b) => a.g.category.localeCompare(b.g.category)
+                  || a.g.product_name.localeCompare(b.g.product_name));
+
+  const host = document.getElementById("rr");
+  host.innerHTML = `
+    <p class="sub" style="margin:16px 0 0"><b>${hits.length}</b> tiered products resolve at
+      ${hc.toLocaleString()} employees${gaps.length ? ` · <b style="color:var(--warn)">${gaps.length}</b> fall in a ladder gap` : ""}.</p>
+    <div class="results">
+      ${hits.map(h => resolvedCard(h.g, h.row)).join("")}
+      ${gaps.map(x => gapCard(x.g, x.bands)).join("")}
+    </div>`;
+  host.querySelectorAll("[data-lad]").forEach(b => b.addEventListener("click", () => {
+    const box = document.getElementById("lad-" + b.dataset.lad);
+    if (box) box.classList.toggle("hide");
+  }));
+}
+
+const keyOf = s => s.replace(/[^a-zA-Z0-9]/g, "");
+
+function resolvedCard(g, row) {
+  const k = keyOf(g.group_id);
+  return `<div class="item">
+    <button class="ihead" data-lad="${k}">
+      <div class="grow">
+        <div class="iname">${esc(g.product_name)}${adjBadge(row)}</div>
+        <div class="icode">${esc(g.category)} · tier ${esc(tierLabel(row))} · part ${esc(g.product_code)}</div>
+      </div>
+      <div class="iright">${priceCell(row)}</div>
+    </button>
+    <div class="ibody hide" id="lad-${k}">
+      ${ladder(g.rows.filter(r => r.tiered), row.id)}
+      ${isReal(row.monthly_minimum)
+        ? `<div class="callout min"><b>Monthly minimum ${esc(row.monthly_minimum)}</b> applies on top of the unit price.</div>` : ""}
+      ${isReal(row.conditions) ? `<div class="callout cond">${esc(row.conditions)}</div>` : ""}
+      <div class="src">${esc(row.source_page)}</div>
+    </div>
+  </div>`;
+}
+
+function gapCard(g, bands) {
+  const k = keyOf(g.group_id);
+  return `<div class="item" style="border-color:#5c481c">
+    <button class="ihead" data-lad="${k}">
+      <div class="grow">
+        <div class="iname">${esc(g.product_name)}
+          <span class="adj" title="No tier in this product's ladder covers ${hc} employees.">gap in ladder</span></div>
+        <div class="icode">${esc(g.category)} · no band covers ${hc.toLocaleString()} EE · part ${esc(g.product_code)}</div>
+      </div>
+      <div class="iright"><span class="tag none">unresolved</span></div>
+    </button>
+    <div class="ibody hide" id="lad-${k}">
+      <div class="callout min">The printed ladder has no band containing ${hc.toLocaleString()} employees.
+        No price is shown because none exists in the source &mdash; nothing is interpolated.</div>
+      ${ladder(bands)}
+      <div class="src">${esc(bands[0].source_page)}</div>
+    </div>
+  </div>`;
+}
+
+/* ===========================================================================
+   8. DRILL
+   =========================================================================== */
+const drill = { mode:null, q:null, side:"price", score:{right:0,wrong:0}, focus:null,
+                timeLeft:0, running:false };
+
+function modeDefs() {
+  const tierPool = tieredGroups(true).reduce((n, g) => {
+    const fields = drillableFields(g);
+    if (!fields.length) return n;
+    return n + new Set(fields.flatMap(f => bandsFor(g, f.key).map(r => r.id))).size;
+  }, 0);
+  const quotePool = ROWS.filter(r => r.category === "Required Products" && r.dependencies.length).length;
+  return [
+    { id:"flash", title:"Flashcard", desc:"Product and tier shown, recall the price. Self graded. Flip to run price → product.",
+      pool:ELIGIBLE.length, unit:"eligible rows" },
+    { id:"tier",  title:"Tier resolution", desc:"A headcount and a product. Four options, all real prices from that product's own ladder.",
+      pool:tierPool, unit:"drillable tiered rows" },
+    { id:"speed", title:"Speed round", desc:"60 seconds. As many product → price calls as you can make.",
+      pool:ELIGIBLE.length, unit:"eligible rows" },
+    { id:"quote", title:"Build the quote", desc:"A scenario. Pick every required product from the dependency matrix.",
+      pool:quotePool, unit:"Required Products rows" },
+    { id:"promo", title:"Promo recall", desc:"Given a promotion name, recall what it applies to and its eligibility.",
+      pool:PROMOS.length, unit:"promotions", exempt:true }
+  ];
+}
+
+function viewDrill(el) {
+  if (drill.mode) return renderDrill(el);
+  const modes = modeDefs();
+  el.innerHTML = `
+    <h2>Drill</h2>
+    <p class="sub">Spaced repetition is on: items you miss drop to box 1 and come back sooner.</p>
+    ${drill.focus ? `<div class="notice info">Focus session queued: your weakest
+       ${drill.focus.length} items. Pick a mode to start.</div>` : ""}
+    ${STORE.migrated ? `<div class="notice warn">The price book was rebuilt since your last session.
+       ${STORE.migrated} saved item${STORE.migrated===1?"":"s"} no longer exist in the data and were dropped.
+       The rest of your progress carried over.</div>` : ""}
+    <div class="modes">${modes.map(m => {
+      const off = m.exempt ? m.pool < 1 : m.pool < MIN_POOL;
+      return `<button class="mode ${off?"off":""}" ${off?"disabled":""} data-mode="${m.id}">
+        <div class="mt">${m.title}</div>
+        <div class="md">${m.desc}</div>
+        <div class="mn">${off
+          ? `Disabled &mdash; only ${m.pool} ${m.unit}${m.exempt ? "" : `, ${MIN_POOL} needed.
+             Padding the pool would mean degraded questions.`}`
+          : `${m.pool} ${m.unit}`}</div>
+      </button>`;
+    }).join("")}</div>
+    ${PROMOS.length && PROMOS.length < MIN_POOL ? `<div class="notice info">Promo recall reviews the full deck of ${PROMOS.length} promotions rather than sampling from a pool, so the ${MIN_POOL}-item floor that guards the other modes against degraded questions does not apply to it. Every promotion is shown as extracted; nothing is generated.</div>` : ""}
+    ${!PROMOS.length ? `<div class="notice warn"><b>promotions.csv was not present at build time.</b>
+      Promo recall is disabled and the Promos tab is empty. Drop the file into <code>data/</code>
+      and re-run <code>build.py</code>.</div>` : ""}`;
+  el.querySelectorAll("[data-mode]").forEach(b => b.addEventListener("click", () => {
+    drill.mode = b.dataset.mode;
+    drill.score = { right:0, wrong:0 };
+    drill.q = null;
+    if (drill.mode === "speed") { drill.timeLeft = 60; drill.running = false; }
+    render();
+  }));
+}
+
+function drillPool() {
+  if (drill.focus && drill.focus.length) {
+    const set = new Set(drill.focus);
+    const p = ELIGIBLE.filter(r => set.has(r.id));
+    if (p.length) return p;
+  }
+  return ELIGIBLE;
+}
+
+function renderDrill(el) {
+  const acc = drill.score.right + drill.score.wrong;
+  el.innerHTML = `
+    <div class="qbar">
+      <button class="btn" data-tab="drill">&larr; All modes</button>
+      <span><b style="color:var(--good)">${drill.score.right}</b> right ·
+            <b style="color:var(--bad)">${drill.score.wrong}</b> missed
+            ${acc ? `· ${Math.round(100*drill.score.right/acc)}%` : ""}</span>
+      ${drill.mode === "speed" ? `<span class="timer ${drill.timeLeft<=10?"low":""}" id="clock">${drill.timeLeft}s</span>` : ""}
+      ${drill.focus ? `<span class="tag">weakest-10 focus</span>` : ""}
+      ${drill.mode === "flash" ? `<button class="btn" id="flip">Mode: ${
+        drill.side === "price" ? "product → price" : "price → product"}</button>` : ""}
+    </div>
+    <div id="stage" class="stage"></div>`;
+
+  const flip = el.querySelector("#flip");
+  if (flip) flip.addEventListener("click", () => {
+    drill.side = drill.side === "price" ? "product" : "price";
+    drill.q = null; render();
+  });
+
+  ({ flash:qFlash, tier:qTier, speed:qSpeed, quote:qQuote, promo:qPromo })[drill.mode]();
+}
+
+const stage = () => document.getElementById("stage");
+function next() { drill.q = null; render(); }
+
+/* ---- flashcard ---------------------------------------------------------- */
+function qFlash(mode) {
+  if (!drill.q) drill.q = { row: drawScheduled(drillPool(), null), shown:false };
+  const r = drill.q.row, s = stage();
+  const priceText = [r.unit_price, r.one_time_fee].filter(isReal).join("  +  ");
+  const front  = drill.side === "price" ? esc(r.product_name) + adjBadge(r) : esc(priceText);
+  const answer = drill.side === "price" ? priceText : r.product_name;
+
+  s.innerHTML = `<div class="card qcard">
+    <div class="qprompt">${drill.side === "price" ? "What is the price?" : "Which product is this?"}</div>
+    <div class="qmain">${front}</div>
+    <div class="qsub">${esc(r.category)} · ${esc(tierLabel(r))}${
+      isReal(r.pricing_model) ? " · " + esc(r.pricing_model) : ""}</div>
+    ${drill.q.shown ? `
+      <div class="qans">${esc(answer)}</div>
+      ${isReal(r.monthly_minimum) ? `<div class="callout min" style="text-align:left">
+        Monthly minimum ${esc(r.monthly_minimum)} &mdash; quote it alongside the unit price.</div>` : ""}
+      ${isReal(r.conditions) ? `<div class="callout cond" style="text-align:left">${esc(r.conditions)}</div>` : ""}
+      <div class="src" style="text-align:left">${esc(r.source_page)}</div>
+      <div class="row" style="justify-content:center;margin-top:16px">
+        <button class="btn good" id="got">Got it</button>
+        <button class="btn bad"  id="miss">Missed it</button>
+      </div>`
+      : `<div style="margin-top:20px"><button class="btn primary" id="reveal">Reveal</button></div>`}
+  </div>`;
+
+  const rv = s.querySelector("#reveal");
+  if (rv) rv.addEventListener("click", () => { drill.q.shown = true; render(); });
+  const tag = mode || "flash";
+  const g = s.querySelector("#got"), m = s.querySelector("#miss");
+  if (g) g.addEventListener("click", () => { grade(r.id, true,  tag); drill.score.right++; next(); });
+  if (m) m.addEventListener("click", () => { grade(r.id, false, tag); drill.score.wrong++; next(); });
+}
+
+/* ---- tier resolution ---------------------------------------------------- */
+const PRICE_FIELDS = [
+  { key:"unit_price",   label:"recurring price" },
+  { key:"one_time_fee", label:"one-time fee" }
+];
+
+/** Bands of a ladder that are drillable on a given price column. */
+function bandsFor(group, fieldKey) {
+  return group.rows.filter(r =>
+    r.tiered && r.quiz_eligible && r.tier_min_num != null && isReal(r[fieldKey]));
+}
+
+/** A ladder is drillable on a column only if that column actually varies
+ *  across tiers - otherwise every option would be the same number. */
+function drillableFields(group) {
+  return PRICE_FIELDS.filter(f => {
+    const b = bandsFor(group, f.key);
+    return b.length >= 2 && new Set(b.map(r => r[f.key])).size >= 2;
+  });
+}
+
+function makeTierQuestion() {
+  const groups = tieredGroups(true).filter(g => drillableFields(g).length);
+  if (!groups.length) return null;
+
+  for (let attempt = 0; attempt < 60; attempt++) {
+    const g = pick(groups);
+    const field = pick(drillableFields(g));
+    const bands = bandsFor(g, field.key);
+    const target = pick(bands);
+    const answer = target[field.key];
+
+    // Distractors are real prices from this product's other tiers - never invented.
+    const others = [...new Set(bands.filter(r => r[field.key] !== answer)
+                                    .map(r => r[field.key]))];
+    if (!others.length) continue;
+
+    let options = shuffle(others).slice(0, 3);
+    if (options.length < 3) {
+      // Top up from real prices on the same column, same category. Still real.
+      const pool = [...new Set(ELIGIBLE
+        .filter(r => r.category === g.category && isReal(r[field.key]) && r[field.key] !== answer)
+        .map(r => r[field.key]))].filter(p => !options.includes(p));
+      options = options.concat(shuffle(pool).slice(0, 3 - options.length));
+    }
+    if (options.length < 3) continue;
+
+    // A headcount inside the target band. Both bounds come from the source.
+    const lo = target.tier_min_num;
+    const hi = target.tier_max_num === Infinity || target.tier_max_num == null
+      ? lo + 50 + Math.floor(Math.random() * 400) : target.tier_max_num;
+    const n = lo + Math.floor(Math.random() * Math.max(1, hi - lo + 1));
+
+    return { row:target, group:g, field, answer, n:Math.max(1, n),
+             options: shuffle(options.concat(answer)), answered:null };
+  }
+  return null;
+}
+
+function qTier() {
+  if (!drill.q) drill.q = makeTierQuestion();
+  const q = drill.q, s = stage();
+  if (!q) { s.innerHTML = `<div class="empty">Could not build a question from real prices. Try another mode.</div>`; return; }
+  const r = q.row;
+
+  s.innerHTML = `<div class="card qcard">
+    <div class="qprompt">Tier resolution</div>
+    <div class="qmain">Client has <span class="mono">${q.n.toLocaleString()}</span> employees.<br>
+      What is the ${q.field.label} for ${esc(r.product_name)}?${adjBadge(r)}</div>
+    <div class="qsub">${esc(r.category)}${isReal(r.pricing_model) ? " · " + esc(r.pricing_model) : ""}</div>
+    <div class="opts">${q.options.map((o,i) => {
+      let cls = "";
+      if (q.answered != null) {
+        if (o === q.answer) cls = "right";
+        else if (o === q.answered) cls = "wrong";
+      }
+      return `<button class="opt ${cls}" data-opt="${i}" ${q.answered!=null?"disabled":""}>${esc(o)}</button>`;
+    }).join("")}</div>
+    ${q.answered != null ? `
+      <div class="feedback ${q.answered === q.answer ? "ok":"no"}">
+        ${q.answered === q.answer ? "Correct" : "Correct answer: " + esc(q.answer)}
+        &mdash; tier ${esc(tierLabel(r))}</div>
+      ${isReal(r.monthly_minimum) ? `<div class="callout min" style="text-align:left">
+        Monthly minimum ${esc(r.monthly_minimum)} also applies.</div>` : ""}
+      <div style="text-align:left;margin-top:12px">${ladder(q.group.rows.filter(x=>x.tiered), r.id)}</div>
+      <div class="src" style="text-align:left">${esc(r.source_page)}</div>
+      <div style="margin-top:16px"><button class="btn primary" id="nx">Next</button></div>` : ""}
+  </div>`;
+
+  s.querySelectorAll("[data-opt]").forEach(b => b.addEventListener("click", () => {
+    const chosen = q.options[+b.dataset.opt];
+    q.answered = chosen;
+    const ok = chosen === q.answer;
+    ok ? drill.score.right++ : drill.score.wrong++;
+    grade(r.id, ok, "tier");
+    render();
+  }));
+  const nx = s.querySelector("#nx");
+  if (nx) nx.addEventListener("click", next);
+}
+
+/* ---- speed round -------------------------------------------------------- */
+function qSpeed() {
+  const s = stage();
+  if (!drill.running && drill.timeLeft === 60) {
+    s.innerHTML = `<div class="card qcard">
+      <div class="qprompt">Speed round</div>
+      <div class="qmain">60 seconds</div>
+      <div class="qsub">Product and tier appear, you call the price, reveal, self grade. Go as fast as you can.</div>
+      <div style="margin-top:20px"><button class="btn primary" id="start">Start</button></div></div>`;
+    s.querySelector("#start").addEventListener("click", () => {
+      drill.running = true;
+      timerHandle = setInterval(() => {
+        drill.timeLeft--;
+        const c = document.getElementById("clock");
+        if (c) { c.textContent = drill.timeLeft + "s"; c.classList.toggle("low", drill.timeLeft <= 10); }
+        if (drill.timeLeft <= 0) { clearInterval(timerHandle); timerHandle = null; drill.running = false; render(); }
+      }, 1000);
+      render();
+    });
+    return;
+  }
+  if (!drill.running && drill.timeLeft <= 0) {
+    const total = drill.score.right + drill.score.wrong;
+    s.innerHTML = `<div class="card qcard">
+      <div class="qprompt">Time</div>
+      <div class="qmain">${drill.score.right} correct out of ${total}</div>
+      <div class="qsub">${total ? Math.round(100*drill.score.right/total) : 0}% accuracy in 60 seconds</div>
+      <div class="row" style="justify-content:center;margin-top:20px">
+        <button class="btn primary" id="again">Run it again</button>
+        <button class="btn" data-tab="drill">All modes</button></div></div>`;
+    s.querySelector("#again").addEventListener("click", () => {
+      drill.timeLeft = 60; drill.score = {right:0,wrong:0}; drill.q = null; render();
+    });
+    return;
+  }
+  qFlash("speed");   // same card mechanic, clock running in the bar
+}
+
+/* ---- build the quote ---------------------------------------------------- */
+const DEP_UNIVERSE = [...new Set(ROWS
+  .filter(r => r.category === "Required Products")
+  .flatMap(r => r.dependencies))].sort();
+
+function qQuote() {
+  const pool = ROWS.filter(r => r.category === "Required Products" && r.dependencies.length);
+  if (!drill.q) {
+    const row = drawScheduled(pool, null);
+    drill.q = { row, n: pick([12, 45, 85, 140, 260, 520, 1200]), sel:new Set(), done:false };
+  }
+  const q = drill.q, r = q.row, s = stage();
+  const need = new Set(r.dependencies);
+  const missed = r.dependencies.filter(d => !q.sel.has(d));
+  const extra  = [...q.sel].filter(d => !need.has(d));
+  const exact  = !missed.length && !extra.length;
+
+  const chips = DEP_UNIVERSE.map((d, i) => {
+    let cls = q.sel.has(d) ? "sel" : "";
+    if (q.done) cls = need.has(d) ? (q.sel.has(d) ? "ok" : "miss") : (q.sel.has(d) ? "extra" : "");
+    return `<button class="pick ${cls}" data-dep="${i}" ${q.done?"disabled":""}>${esc(d)}</button>`;
+  }).join("");
+
+  const verdict = [
+    missed.length ? `missed: ${missed.map(esc).join(", ")}` : "",
+    extra.length  ? `not required: ${extra.map(esc).join(", ")}` : ""
+  ].filter(Boolean).join(" · ");
+
+  const result = `
+    <div class="feedback ${exact?"ok":"no"}">${exact ? "Exact match" : verdict}</div>
+    <div class="callout cond" style="text-align:left"><b>Required per the dependency matrix:</b>
+      ${r.dependencies.map(esc).join(", ")}</div>
+    ${isReal(r.conditions) ? `<div class="callout cond" style="text-align:left">${esc(r.conditions)}</div>` : ""}
+    <div class="callout min" style="text-align:left">Required Products carries no pricing at all
+      &mdash; every price, tier and fee field on this row is N/A by design. Price the dependencies from Lookup.</div>
+    <div class="src" style="text-align:left">${esc(r.source_page)}</div>
+    <div style="margin-top:16px"><button class="btn primary" id="nx">Next scenario</button></div>`;
+
+  s.innerHTML = `<div class="card qcard">
+    <div class="qprompt">Build the quote</div>
+    <div class="qmain">Client has <span class="mono">${q.n.toLocaleString()}</span> employees and wants
+      ${esc(r.product_name)}.</div>
+    <div class="qsub">Select every product that must be on the quote for this to work.</div>
+    <div class="picks">${chips}</div>
+    ${q.done ? result
+             : `<div style="margin-top:20px"><button class="btn primary" id="sub">Submit quote</button></div>`}
+  </div>`;
+
+  s.querySelectorAll("[data-dep]").forEach(b => b.addEventListener("click", () => {
+    const d = DEP_UNIVERSE[+b.dataset.dep];
+    q.sel.has(d) ? q.sel.delete(d) : q.sel.add(d);
+    render();
+  }));
+  const sub = s.querySelector("#sub");
+  if (sub) sub.addEventListener("click", () => {
+    q.done = true;
+    exact ? drill.score.right++ : drill.score.wrong++;
+    grade(r.id, exact, "quote");
+    render();
+  });
+  const nx = s.querySelector("#nx");
+  if (nx) nx.addEventListener("click", next);
+}
+
+/* ---- promo recall ------------------------------------------------------- */
+const promoField = (p, keys) => {
+  for (const k of Object.keys(p)) {
+    if (k.startsWith("_") || k === "id") continue;
+    const lk = k.toLowerCase();
+    if (keys.some(want => lk.includes(want))) return { key:k, value:p[k] };
+  }
+  return null;
+};
+
+function qPromo() {
+  const s = stage();
+  if (!PROMOS.length) { s.innerHTML = `<div class="empty">No promotions loaded.</div>`; return; }
+  if (!drill.q) drill.q = { promo: pick(PROMOS), shown:false };
+  const p = drill.q.promo;
+
+  const details = Object.keys(p).filter(k => !k.startsWith("_") && k !== "id" && k !== p._nameKey)
+    .map(k => ({ k, v: p[k] })).filter(x => x.v && x.v !== p._name);
+
+  s.innerHTML = `<div class="card qcard">
+    <div class="qprompt">Promo recall</div>
+    <div class="qmain">${esc(p._name)}</div>
+    <div class="qsub">What does it apply to, and who is eligible?</div>
+    ${drill.q.shown ? `
+      <div style="text-align:left;margin-top:18px" class="fields">
+        ${details.map(d => `<div class="f wide"><div class="fk">${esc(d.k)}</div>
+          <div class="fv">${val(d.v)}</div></div>`).join("")}
+      </div>
+      <div class="callout cond" style="text-align:left">Promotions never overwrite list price.
+        Quote the list price from Lookup, then apply the promotion separately.</div>
+      <div class="row" style="justify-content:center;margin-top:16px">
+        <button class="btn good" id="got">Got it</button>
+        <button class="btn bad"  id="miss">Missed it</button></div>`
+      : `<div style="margin-top:20px"><button class="btn primary" id="reveal">Reveal</button></div>`}
+  </div>`;
+
+  const rv = s.querySelector("#reveal");
+  if (rv) rv.addEventListener("click", () => { drill.q.shown = true; render(); });
+  const done = ok => { ok ? drill.score.right++ : drill.score.wrong++;
+    STORE.log.push({ t:Date.now(), id:p.id, category:"Promotions", mode:"promo", ok });
+    save(); next(); };
+  const g = s.querySelector("#got"), m = s.querySelector("#miss");
+  if (g) g.addEventListener("click", () => done(true));
+  if (m) m.addEventListener("click", () => done(false));
+}
+
+/* ===========================================================================
+   9. PROMOS
+   =========================================================================== */
+let promoShowInactive = false;
+
+function viewPromos(el) {
+  if (!PROMOS.length) {
+    el.innerHTML = `<h2>Promotions</h2>
+      <div class="notice warn"><b>data/promotions.csv was not present when this file was built.</b><br>
+        Drop it into the <code>data/</code> folder and re-run <code>python3 build.py</code>.
+        Nothing else needs to change &mdash; the promotions panel and the Promo recall drill
+        light up automatically.</div>`;
+    return;
+  }
+  const active   = PROMOS.filter(p => p._active);
+  const inactive = PROMOS.filter(p => !p._active);
+  const shown    = promoShowInactive ? PROMOS : active;
+
+  el.innerHTML = `
+    <h2>Promotions</h2>
+    <p class="sub">Promotions are separate from list price and never overwrite it. Quote list price first,
+      then apply the promotion.</p>
+    <div class="row">
+      <button class="chip ${!promoShowInactive?"on":""}" id="tg-a">Active only (${active.length})</button>
+      <button class="chip ${promoShowInactive?"on":""}" id="tg-b">Show all (${PROMOS.length})</button>
+      ${inactive.length ? `<span class="sub" style="margin:0">${inactive.length} expired / inactive</span>` : ""}
+    </div>
+    <div class="results">${shown.map(promoCard).join("")}</div>`;
+
+  el.querySelector("#tg-a").addEventListener("click", () => { promoShowInactive = false; render(); });
+  el.querySelector("#tg-b").addEventListener("click", () => { promoShowInactive = true;  render(); });
+}
+
+function promoCard(p) {
+  const fields = Object.keys(p).filter(k => !k.startsWith("_") && k !== "id");
+  return `<div class="item ${p._active ? "" : ""}" style="${p._active ? "" : "opacity:.8;border-style:dashed"}">
+    <div class="pad">
+      <div class="row" style="align-items:flex-start">
+        <div class="grow"><div class="iname">${esc(p._name)}</div></div>
+        <span class="tag ${p._active ? "both" : "none"}">${p._active ? "Active" : "Expired / inactive"}</span>
+      </div>
+      <div class="fields" style="margin-top:10px">
+        ${fields.map(k => `<div class="f wide"><div class="fk">${esc(k)}</div>
+          <div class="fv">${val(p[k])}</div></div>`).join("")}
+      </div>
+      <div class="callout cond">Promotion text is shown as extracted. It is not linked to a price row,
+        so nothing here modifies a list price.</div>
+    </div>
+  </div>`;
+}
+
+/* ===========================================================================
+   10. STATS
+   =========================================================================== */
+function viewStats(el) {
+  const items = Object.entries(STORE.items);
+  const seen  = items.filter(([, v]) => v.seen > 0);
+  const right = STORE.log.filter(e => e.ok).length;
+  const total = STORE.log.length;
+  const boxes = [1,2,3,4,5].map(b => items.filter(([, v]) => v.box === b).length);
+  const due   = items.filter(([, v]) => v.due <= Date.now() && v.seen > 0).length;
+
+  const byCat = {};
+  for (const e of STORE.log) {
+    const c = byCat[e.category] || (byCat[e.category] = { n:0, ok:0 });
+    c.n++; if (e.ok) c.ok++;
+  }
+
+  const weakest = seen
+    .map(([id, v]) => ({ id, v, row: BY_ID.get(id),
+                         rate: v.wrong / Math.max(1, v.seen) }))
+    .filter(x => x.row && x.v.wrong > 0)
+    .sort((a,b) => b.rate - a.rate || b.v.wrong - a.v.wrong)
+    .slice(0, 10);
+
+  el.innerHTML = `
+    <h2>Stats</h2>
+    <p class="sub">Progress is stored in this browser under <code>${STORE_KEY}</code>, build ${RAW.data_version}.</p>
+    <div class="grid3">
+      <div class="card stat"><div class="sv">${total ? Math.round(100*right/total) : 0}%</div>
+        <div class="sk">Overall accuracy</div><div class="bar"><i style="width:${total?Math.round(100*right/total):0}%"></i></div></div>
+      <div class="card stat"><div class="sv">${total}</div><div class="sk">Answers logged</div></div>
+      <div class="card stat"><div class="sv">${STORE.streak || 0}</div>
+        <div class="sk">Day streak${STORE.best ? ` · best ${STORE.best}` : ""}</div></div>
+      <div class="card stat"><div class="sv">${seen.length}<span style="font-size:14px;color:var(--dim)">
+        /${RAW.counts.quiz_eligible}</span></div><div class="sk">Items touched</div></div>
+      <div class="card stat"><div class="sv" style="color:${due?"var(--warn)":"var(--good)"}">${due}</div>
+        <div class="sk">Due for review</div></div>
+    </div>
+
+    <h2>Leitner boxes</h2>
+    <p class="sub">Box 5 is retained. A miss sends an item straight back to box 1.</p>
+    <div class="boxes">${boxes.map((n,i) =>
+      `<div class="box"><b>${n}</b><span>Box ${i+1} · ${BOX_DAYS[i]}d</span></div>`).join("")}</div>
+
+    <h2>Accuracy by category</h2>
+    ${Object.keys(byCat).length ? `<div class="wk">${Object.entries(byCat)
+      .sort((a,b) => b[1].n - a[1].n).map(([c, v]) => `
+      <div class="wkrow"><div class="wn">${esc(c)}</div>
+        <div class="bar" style="width:150px;margin:0"><i style="width:${Math.round(100*v.ok/v.n)}%"></i></div>
+        <div class="ws" style="color:var(--muted)">${Math.round(100*v.ok/v.n)}% of ${v.n}</div></div>`).join("")}</div>`
+      : `<div class="empty">Run a drill and this fills in.</div>`}
+
+    <h2>Weakest 10</h2>
+    ${weakest.length ? `
+      <div class="wk">${weakest.map(w => `<div class="wkrow">
+        <div class="wn">${esc(w.row.product_name)}
+          <span style="color:var(--dim)">· ${esc(tierLabel(w.row))}</span></div>
+        <div class="ws">${w.v.wrong} missed / ${w.v.seen}</div></div>`).join("")}</div>
+      <div class="row" style="margin-top:12px">
+        <button class="btn primary" id="focus">Drill these 10</button>
+        ${drill.focus ? `<button class="btn" id="clearfocus">Clear focus</button>` : ""}
+      </div>`
+      : `<div class="empty">Nothing missed yet. Miss something and it shows up here.</div>`}
+
+    <h2>Reset</h2>
+    <div class="row"><button class="btn bad" id="reset">Erase all progress</button>
+      <span class="sub" style="margin:0">Clears Leitner boxes, streak and history in this browser.</span></div>`;
+
+  const f = el.querySelector("#focus");
+  if (f) f.addEventListener("click", () => { drill.focus = weakest.map(w => w.id); go("drill"); });
+  const cf = el.querySelector("#clearfocus");
+  if (cf) cf.addEventListener("click", () => { drill.focus = null; render(); });
+  el.querySelector("#reset").addEventListener("click", () => {
+    if (confirm("Erase all drill progress in this browser?")) {
+      STORE = blankStore(); save(); drill.focus = null; render();
+    }
+  });
+}
+
+/* ===========================================================================
+   11. Boot
+   =========================================================================== */
+render();
+</script>
+</body>
+</html>
